@@ -474,6 +474,45 @@ applied to prod; nothing user-visible works until it is. server-only NOT used
 anywhere new (banned from worker-reachable code per 2026-07-18 incident;
 affiliates.ts is reachable from the whop route only, not worker.ts).
 
+## Per-person admin accounts replace shared /internal password (2026-07-20)
+
+Branch feature/admin-accounts. Migration 018: admin_users (user_id UNIQUE ->
+users, role super_admin|admin, created_by) + admin_audit_log (admin_user_id,
+action, target); both RLS service-role-only. Seeds Eng-Alvin super_admin,
+hamishfromatech + Blesskimbi admin (by github_username lookup).
+
+Auth model: an admin is a signed-in user (existing GitHub OAuth) whose
+users.id is in admin_users. Enforcement is TWO layers, both required:
+(1) src/app/internal/layout.tsx gates page render (signed-out -> /login;
+signed-in non-admin -> terminal 403); (2) EVERY /internal server action calls
+requireAdmin() itself, because a layout does NOT protect server actions (they
+are independent POST endpoints). features/admin/admin-auth.ts:
+getCurrentAdmin/requireAdmin/recordAdminAction/superAdminCount.
+
+Middleware: DROPPED the /internal Basic Auth branch (enforceInternalBasicAuth
+removed) — /internal now just gets the session-refresh pass. The machine
+/api/internal/* routes are UNCHANGED: they keep CRON_SECRET/INTERNAL_PASSWORD
+via src/lib/internal-auth.ts (cron has no GitHub session). No Basic Auth
+fallback for the pages (decided against: it would be a shared unattributed
+bypass of the whole system; the seed guarantees a super_admin so the table is
+never empty).
+
+Pages: /internal/admins (super_admin only; add by github_username/email of an
+existing user, remove, with a hard block on removing the last super_admin) and
+/internal/audit (read-only trail). Affiliate actions + the /internal/test
+requeue now requireAdmin + audit; requeue logic extracted to
+features/review-queue/requeue-failed.ts (shared by the machine route and the
+admin action, since the browser no longer sends Basic Auth to the machine
+route). PR #30 auth-loop is resolved by this (no Basic Auth challenge ->
+Link prefetches carry the session cookie, no dialog) — TO BE CONFIRMED live.
+
+Tests: features/admin/__tests__/admin-auth.test.ts (non-admin denial,
+super_admin gate, superAdminCount for the last-super-admin guard). Deleted the
+obsolete features/auth/__tests__/middleware.test.ts (tested the removed
+enforceInternalBasicAuth). 178 tests pass; tsc clean; next build clean.
+Migration 018 NOT yet applied to prod. server-only NOT used (removed the one
+I initially added to admin-auth.ts; it broke vitest and is redundant there).
+
 ## Backlog — next up (2026-07-18, do first)
 
 1. TOKEN RESERVATION LEAK — own PR, planned 2026-07-17 night, execute fresh:

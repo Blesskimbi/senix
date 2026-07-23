@@ -2,13 +2,15 @@ import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 
 /**
- * Shared auth for the /api/internal/* routes.
+ * Shared auth for the MACHINE /api/internal/* routes (called by the GitHub
+ * Actions cron). These keep CRON_SECRET/INTERNAL_PASSWORD auth. The human
+ * /internal/* PAGES use per-person admin session auth instead (migration 018,
+ * features/admin/admin-auth.ts) — this helper does not gate those.
  *
  * Fails CLOSED: if neither CRON_SECRET nor INTERNAL_PASSWORD is configured,
  * every request is rejected. A misconfigured environment must never expose
  * internal endpoints (the reconcile route can mutate billing state for every
- * user). This matches the fail-closed behavior of enforceInternalBasicAuth
- * in src/middleware.ts, which gates the /internal/* pages.
+ * user).
  *
  * All secret comparisons use crypto.timingSafeEqual (available on Cloudflare
  * Workers under nodejs_compat) so the comparison time does not leak how many
