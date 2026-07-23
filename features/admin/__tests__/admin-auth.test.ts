@@ -31,23 +31,25 @@ vi.mock('@features/shared/supabase', () => ({
             if (opts?.count) {
               return { eq: async () => ({ count: h.superCount }) };
             }
-            // getCurrentAdmin path: .select(...).eq('users.auth_user_id',..).maybeSingle()
+            // getCurrentAdmin path: single query embedding users (incl. id).
             return {
               eq: () => ({
                 maybeSingle: async () => ({
                   data: h.adminRow
-                    ? { role: h.adminRow.role, users: { github_username: 'x', email: 'x@e.com' } }
+                    ? {
+                        role: h.adminRow.role,
+                        users: {
+                          id: h.userRow?.id ?? 'user1',
+                          github_username: 'x',
+                          email: 'x@e.com',
+                        },
+                      }
                     : null,
                   error: null,
                 }),
               }),
             };
           },
-        };
-      }
-      if (table === 'users') {
-        return {
-          select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: h.userRow }) }) }),
         };
       }
       return {};
