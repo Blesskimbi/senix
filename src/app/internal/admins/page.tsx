@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@features/shared/supabase';
 import { getCurrentAdmin } from '@features/admin/admin-auth';
 import { addAdmin, removeAdmin } from './actions';
+import { PageHeader, Card, Table, Badge, Button } from '../ui';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,9 +14,8 @@ type AdminRow = {
 };
 
 /**
- * Admin roster management — super_admin only. Non-super-admins who reach this
- * page (the layout lets any admin in) see a notice instead of the controls;
- * the server actions independently enforce super_admin regardless.
+ * Admin roster — super_admin only for changes. Any admin can view. The server
+ * actions independently enforce super_admin regardless of what renders here.
  */
 export default async function InternalAdminsPage() {
   const me = await getCurrentAdmin();
@@ -30,85 +30,77 @@ export default async function InternalAdminsPage() {
   const admins = (data ?? []) as unknown as AdminRow[];
 
   return (
-    <main className="min-h-screen bg-zinc-950 p-8 font-mono text-sm text-zinc-100">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Admins</h1>
-        <nav className="flex gap-4 text-xs text-blue-300">
-          <a href="/internal">status</a>
-          <a href="/internal/audit">audit</a>
-          <a href="/internal/metrics">metrics</a>
-        </nav>
-      </div>
+    <>
+      <PageHeader
+        title="Admins"
+        subtitle={isSuper ? 'You are a super_admin.' : 'Read-only — you are an admin, not a super_admin.'}
+      />
 
-      {!isSuper && (
-        <p className="mb-6 rounded border border-yellow-700 bg-yellow-950/30 p-3 text-yellow-300">
-          You are an admin but not a super_admin, so you can view the roster but not
-          change it.
-        </p>
-      )}
-
-      <div className="mb-8 space-y-1">
-        {admins.map((a) => (
-          <div key={a.id} className="flex items-center gap-4">
-            <span className="w-48 truncate">
-              {a.users?.github_username ?? a.users?.email ?? 'unknown'}
-            </span>
-            <span
-              className={a.role === 'super_admin' ? 'w-28 text-purple-300' : 'w-28 text-zinc-400'}
-            >
-              {a.role}
-            </span>
-            <span className="w-28 text-zinc-600">
-              {new Date(a.created_at).toLocaleDateString()}
-            </span>
-            {isSuper && (
-              <form action={removeAdmin}>
-                <input type="hidden" name="admin_row_id" value={a.id} />
-                <button
-                  type="submit"
-                  className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-red-300 hover:bg-zinc-800"
-                >
-                  remove
-                </button>
-              </form>
-            )}
-          </div>
-        ))}
+      <div className="mb-8">
+        <Table
+          head={
+            <tr>
+              <th className="px-4 py-2">Admin</th>
+              <th className="px-4 py-2">Role</th>
+              <th className="px-4 py-2">Added</th>
+              <th className="px-4 py-2" />
+            </tr>
+          }
+        >
+          {admins.map((a) => (
+            <tr key={a.id} className="text-secondary">
+              <td className="px-4 py-2 text-primary">
+                {a.users?.github_username ?? a.users?.email ?? 'unknown'}
+              </td>
+              <td className="px-4 py-2">
+                <Badge tone={a.role === 'super_admin' ? 'purple' : 'neutral'}>{a.role}</Badge>
+              </td>
+              <td className="px-4 py-2 text-muted">{new Date(a.created_at).toLocaleDateString()}</td>
+              <td className="px-4 py-2">
+                {isSuper && (
+                  <form action={removeAdmin}>
+                    <input type="hidden" name="admin_row_id" value={a.id} />
+                    <Button type="submit" variant="danger">
+                      remove
+                    </Button>
+                  </form>
+                )}
+              </td>
+            </tr>
+          ))}
+        </Table>
       </div>
 
       {isSuper && (
-        <section>
-          <h2 className="mb-3 text-lg font-bold">Add admin</h2>
+        <Card>
+          <h2 className="mb-3 text-sm font-semibold text-primary">Add admin</h2>
           <form action={addAdmin} className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-xs text-zinc-400">
+            <label className="flex flex-col gap-1 text-xs text-secondary">
               github username or email (must have logged in)
               <input
                 name="identifier"
                 required
                 placeholder="octocat"
-                className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-100"
+                className="rounded-lg border border-surface-border bg-surface-raised px-2 py-1.5 text-sm text-primary outline-none focus:border-accent"
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs text-zinc-400">
+            <label className="flex flex-col gap-1 text-xs text-secondary">
               role
               <select
                 name="role"
                 defaultValue="admin"
-                className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-100"
+                className="rounded-lg border border-surface-border bg-surface-raised px-2 py-1.5 text-sm text-primary outline-none focus:border-accent"
               >
                 <option value="admin">admin</option>
                 <option value="super_admin">super_admin</option>
               </select>
             </label>
-            <button
-              type="submit"
-              className="rounded border border-zinc-600 px-3 py-1 hover:bg-zinc-800"
-            >
+            <Button type="submit" variant="primary">
               Add
-            </button>
+            </Button>
           </form>
-        </section>
+        </Card>
       )}
-    </main>
+    </>
   );
 }
