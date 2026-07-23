@@ -72,6 +72,8 @@ export default async function InternalPage() {
       <nav className="mb-8 flex gap-4 text-xs text-blue-300">
         <a href="/internal/metrics">metrics</a>
         <a href="/internal/affiliates">affiliates</a>
+        <a href="/internal/admins">admins</a>
+        <a href="/internal/audit">audit</a>
         <a href="/internal/feedback">feedback</a>
         <a href="/internal/test">test</a>
       </nav>

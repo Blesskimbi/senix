@@ -121,3 +121,26 @@
    with PAID_PLAN_DETAILS), review totals/failures, an explicit "errored"
    bucket (completed with NULL risk_level), credit pack revenue, and
    commission totals.
+
+   ### admin_users (migration 018)
+   Per-person admins for /internal/*. An admin is a signed-in user (GitHub
+   OAuth) whose users.id is here. Replaces the shared INTERNAL_PASSWORD Basic
+   Auth for the /internal PAGES (machine /api/internal/* routes keep their own
+   auth).
+   - `id` (uuid, pk)
+   - `user_id` (uuid, UNIQUE, FK users(id) ON DELETE CASCADE)
+   - `role` ('super_admin' | 'admin')
+   - `created_by` (uuid, FK users(id), nullable)
+   - `created_at` (timestamptz)
+   - RLS enabled, no policies (service-role only).
+   - Seeded: Eng-Alvin super_admin; hamishfromatech, Blesskimbi admin.
+
+   ### admin_audit_log (migration 018)
+   One row per state-changing /internal action, attributed to the acting admin.
+   - `id` (uuid, pk)
+   - `admin_user_id` (uuid, FK users(id))
+   - `action` (text) — e.g. create_affiliate, mark_commission_paid, add_admin,
+     remove_admin, requeue_failed
+   - `target` (text, nullable) — affiliate code / commission id / user id / etc
+   - `created_at` (timestamptz, indexed desc)
+   - RLS enabled, no policies (service-role only).

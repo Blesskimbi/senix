@@ -2,15 +2,17 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@features/shared/supabase';
+import { requireAdmin, recordAdminAction } from '@features/admin/admin-auth';
 
 /**
- * Admin mutations for the affiliates page. These run server-side with the
- * service role; the page (and therefore these actions) sits behind the
- * /internal Basic Auth gate in middleware. Volume is tiny (manual payouts),
- * so no optimistic UI — just mutate and revalidate.
+ * Admin mutations for the affiliates page. Each action independently calls
+ * requireAdmin() — the /internal layout gate does NOT protect server actions
+ * (they are their own POST endpoints) — and records an attributed audit row.
  */
 
 export async function createAffiliate(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+
   const code = String(formData.get('code') ?? '').toLowerCase().trim();
   const name = String(formData.get('name') ?? '').trim();
   const payoutContact = String(formData.get('payout_contact') ?? '').trim();
@@ -24,11 +26,15 @@ export async function createAffiliate(formData: FormData): Promise<void> {
   });
   if (error) {
     console.error('[internal/affiliates] create failed', { code, message: error.message });
+    return;
   }
+  await recordAdminAction(admin.userId, 'create_affiliate', code);
   revalidatePath('/internal/affiliates');
 }
 
 export async function setCommissionStatus(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+
   const id = String(formData.get('commission_id') ?? '');
   const next = String(formData.get('next_status') ?? '');
   if (!id || (next !== 'paid' && next !== 'unpaid')) return;
@@ -42,6 +48,8 @@ export async function setCommissionStatus(formData: FormData): Promise<void> {
     .eq('id', id);
   if (error) {
     console.error('[internal/affiliates] status update failed', { id, message: error.message });
+    return;
   }
+  await recordAdminAction(admin.userId, `mark_commission_${next}`, id);
   revalidatePath('/internal/affiliates');
 }

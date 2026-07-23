@@ -15,7 +15,29 @@
       "Bash(ls docs/migrations)",
       "Bash(ls supabase *)",
       "Bash(grep -rln \"pr_reviews_this_month\\\\|reviews_reset_at\\\\|mcp_reviews_this_month\" docs supabase)",
-      "Bash(grep -rln \"increment_playground_rate_limit\\\\|playground_rate\" docs supabase)"
+      "Bash(grep -rln \"increment_playground_rate_limit\\\\|playground_rate\" docs supabase)",
+      "Bash(npx wrangler *)",
+      "Bash(curl -s -m 15 -w \"\\\\nHTTP %{http_code}\\\\n\" https://senix.dev/api/webhooks/whop)",
+      "Bash(curl -s -m 15 -X POST -H \"whop-signature: bogus\" -H \"content-type: application/json\" -d '{\"type\":\"payment.succeeded\",\"id\":\"evt_test\"}' -w \"\\\\nHTTP %{http_code}\\\\n\" https://senix.dev/api/webhooks/whop)",
+      "Bash(gh secret *)",
+      "Bash(gh repo *)",
+      "PowerShell(gh secret list --repo Senix-Org/senix)",
+      "Bash(curl -s -m 15 -X POST -H \"whop-signature: v1,bogussig\" -H \"webhook-id: msg_test\" -H \"webhook-timestamp: $\\(date +%s\\)\" -H \"content-type: application/json\" -d '{\"type\":\"payment.succeeded\",\"id\":\"evt_probe\"}' -w \"\\\\nHTTP %{http_code}\\\\n\" https://senix.dev/api/webhooks/whop)",
+      "Bash(curl -s -m 15 -X POST -H \"content-type: application/json\" -d '{}' -w \"\\\\nHTTP %{http_code}\\\\n\" https://senix.dev/api/webhooks/whop)",
+      "WebFetch(domain:docs.whop.com)",
+      "Bash(curl -sL -m 30 https://docs.whop.com/developer/guides/webhooks -H \"User-Agent: Mozilla/5.0\")",
+      "Bash(python -c ' *)",
+      "Bash(git credential *)",
+      "Bash(node_modules/.bin/wrangler --version)",
+      "Bash(node_modules/.bin/wrangler whoami *)",
+      "Bash(node_modules/.bin/wrangler secret *)",
+      "Bash(npx vitest *)",
+      "Bash(python -c \"import json,sys; rows=json.load\\(sys.stdin\\); print\\(sorted\\(rows[0].keys\\(\\)\\) if rows else 'no rows'\\)\")",
+      "Bash(python -m json.tool)",
+      "WebSearch",
+      "Bash(node_modules/.bin/wrangler queues *)",
+      "Bash(python -c \"import json,sys; r=json.load\\(sys.stdin\\); print\\(r.get\\('merged'\\), r.get\\('message'\\)\\)\")",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }
