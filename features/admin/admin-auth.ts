@@ -27,52 +27,47 @@ export type AdminIdentity = {
 
 type AdminLookupRow = {
   role: AdminRole;
-  users: { github_username: string | null; email: string | null } | null;
+  users: { id: string; github_username: string | null; email: string | null } | null;
 };
 
 /**
- * Resolve the current admin from the session, or null. Two-step: read the
- * signed-in Supabase user (RLS client), then look up their internal user row
- * in admin_users (service role). Returns null for signed-out users, users
- * with no internal row, and non-admins alike — callers decide the response.
+ * Resolve the current admin from the session, or null. Reads the signed-in
+ * Supabase user (RLS client), then looks up their admin_users row (service
+ * role). Returns null for signed-out users, users with no internal row, and
+ * non-admins alike — callers decide the response.
+ *
+ * The embed MUST name the relationship: admin_users has two FKs to users
+ * (user_id and created_by), so a bare `users!inner(...)` is ambiguous and
+ * PostgREST returns PGRST201 (error, not data), which previously 403'd every
+ * user including super_admins. `users!admin_users_user_id_fkey` disambiguates,
+ * and selecting users.id here removes the need for a second lookup.
  */
 export async function getCurrentAdmin(): Promise<AdminIdentity | null> {
   const supabase = await createServerSupabaseClient();
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) return null;
 
-  // Map auth user -> internal users.id, then check admin membership in one
-  // joined read. Service role because admin_users is RLS-locked.
   const { data, error } = (await supabaseAdmin
     .from('admin_users')
-    .select('role, users!inner(github_username, email, auth_user_id)')
+    .select('role, users!admin_users_user_id_fkey!inner(id, github_username, email, auth_user_id)')
     .eq('users.auth_user_id', authData.user.id)
     .maybeSingle()) as unknown as { data: AdminLookupRow | null; error: { message: string } | null };
 
   if (error) {
     // Table missing (migration not applied) or a transient error: deny, do
-    // not silently allow. Logged so a missing migration is obvious.
+    // not silently allow. Logged so a misconfiguration is obvious.
     console.error('[admin-auth] admin lookup failed (migration 018 applied?)', {
       message: error.message,
     });
     return null;
   }
-  if (!data) return null;
-
-  // Recover the internal user id via a second cheap lookup keyed on the auth
-  // id (the join above filtered but did not select users.id).
-  const { data: userRow } = (await supabaseAdmin
-    .from('users')
-    .select('id')
-    .eq('auth_user_id', authData.user.id)
-    .maybeSingle()) as unknown as { data: { id: string } | null };
-  if (!userRow) return null;
+  if (!data || !data.users) return null;
 
   return {
-    userId: userRow.id,
+    userId: data.users.id,
     role: data.role,
-    githubUsername: data.users?.github_username ?? null,
-    email: data.users?.email ?? null,
+    githubUsername: data.users.github_username ?? null,
+    email: data.users.email ?? null,
   };
 }
 

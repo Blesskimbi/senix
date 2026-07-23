@@ -21,9 +21,11 @@ export default async function InternalAdminsPage() {
   const me = await getCurrentAdmin();
   const isSuper = me?.role === 'super_admin';
 
+  // Name the relationship: admin_users has two FKs to users (user_id,
+  // created_by), so a bare users(...) embed is ambiguous (PGRST201).
   const { data } = await supabaseAdmin
     .from('admin_users')
-    .select('id, role, created_at, users(github_username, email)')
+    .select('id, role, created_at, users!admin_users_user_id_fkey(github_username, email)')
     .order('created_at', { ascending: true });
   const admins = (data ?? []) as unknown as AdminRow[];
 
