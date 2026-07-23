@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@features/shared/supabase';
 import { createAffiliate, setCommissionStatus } from './actions';
+import { PageHeader, Card, Table, Badge, Button } from '../ui';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -29,12 +30,19 @@ function cents(v: number): string {
 }
 
 /**
- * Affiliate admin: create referrer records and track commission payouts.
- * Commission rows are written exclusively by the Whop payment webhook (10% of
- * a referred user's first subscription payment); this page only reads them
- * and flips paid/unpaid for manual payout bookkeeping.
+ * Affiliate admin: create referrers and track commission payouts. Commission
+ * rows are written exclusively by the Whop payment webhook; this page reads
+ * them and flips paid/unpaid. Supports ?filter=unpaid (linked from the
+ * "Commissions owed" metric tile).
  */
-export default async function InternalAffiliatesPage() {
+export default async function InternalAffiliatesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const sp = await searchParams;
+  const unpaidOnly = sp.filter === 'unpaid';
+
   const [{ data: affiliates }, { data: commissions }] = await Promise.all([
     supabaseAdmin
       .from('affiliates')
@@ -50,110 +58,143 @@ export default async function InternalAffiliatesPage() {
   ]);
 
   const affiliateList = (affiliates ?? []) as unknown as AffiliateRow[];
-  const commissionList = (commissions ?? []) as unknown as CommissionRow[];
+  let commissionList = (commissions ?? []) as unknown as CommissionRow[];
   const unpaidTotal = commissionList
     .filter((c) => c.status === 'unpaid')
     .reduce((s, c) => s + c.commission_cents, 0);
+  if (unpaidOnly) commissionList = commissionList.filter((c) => c.status === 'unpaid');
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100 p-8 font-mono text-sm">
-      <h1 className="text-2xl font-bold mb-1">Affiliates</h1>
-      <p className="text-zinc-500 mb-8">
-        Unpaid commissions: <span className="text-yellow-400">{cents(unpaidTotal)}</span>
-      </p>
+    <>
+      <PageHeader
+        title="Affiliates"
+        subtitle={`Unpaid commissions owed: ${cents(unpaidTotal)}`}
+      />
 
-      <section className="mb-10">
-        <h2 className="text-lg font-bold mb-3">New affiliate</h2>
+      <Card className="mb-8">
+        <h2 className="mb-3 text-sm font-semibold text-primary">New affiliate</h2>
         <form action={createAffiliate} className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-xs text-zinc-400">
-            code (senix.dev/yt/…)
-            <input
-              name="code"
-              required
-              pattern="[a-z0-9-]{2,40}"
-              placeholder="mkbhd"
-              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-100"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-zinc-400">
-            name
-            <input
-              name="name"
-              required
-              placeholder="Marques"
-              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-100"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-zinc-400">
-            payout contact
-            <input
-              name="payout_contact"
-              placeholder="paypal@example.com"
-              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-100"
-            />
-          </label>
-          <button
-            type="submit"
-            className="rounded border border-zinc-600 px-3 py-1 hover:bg-zinc-800"
-          >
+          <Field name="code" label="code (senix.dev/yt/…)" placeholder="mkbhd" required pattern="[a-z0-9-]{2,40}" />
+          <Field name="name" label="name" placeholder="Marques" required />
+          <Field name="payout_contact" label="payout contact" placeholder="paypal@example.com" />
+          <Button type="submit" variant="primary">
             Create
-          </button>
+          </Button>
         </form>
-      </section>
+      </Card>
 
-      <section className="mb-10">
-        <h2 className="text-lg font-bold mb-3">Affiliates ({affiliateList.length})</h2>
-        <div className="space-y-1">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
+        Affiliates ({affiliateList.length})
+      </h2>
+      <div className="mb-8">
+        <Table
+          head={
+            <tr>
+              <th className="px-4 py-2">Link</th>
+              <th className="px-4 py-2">Name</th>
+              <th className="px-4 py-2">Payout contact</th>
+              <th className="px-4 py-2">Created</th>
+            </tr>
+          }
+        >
           {affiliateList.map((a) => (
-            <div key={a.id} className="flex gap-4 text-zinc-300">
-              <span className="w-40 text-blue-300">/yt/{a.code}</span>
-              <span className="w-48">{a.name}</span>
-              <span className="w-64 text-zinc-500">{a.payout_contact ?? '-'}</span>
-              <span className="text-zinc-600">{new Date(a.created_at).toLocaleDateString()}</span>
-            </div>
+            <tr key={a.id} className="text-secondary">
+              <td className="px-4 py-2 text-accent">/yt/{a.code}</td>
+              <td className="px-4 py-2 text-primary">{a.name}</td>
+              <td className="px-4 py-2">{a.payout_contact ?? '—'}</td>
+              <td className="px-4 py-2 text-muted">{new Date(a.created_at).toLocaleDateString()}</td>
+            </tr>
           ))}
-          {affiliateList.length === 0 && <p className="text-zinc-600">None yet.</p>}
-        </div>
-      </section>
+          {affiliateList.length === 0 && (
+            <tr>
+              <td colSpan={4} className="px-4 py-6 text-center text-muted">
+                None yet.
+              </td>
+            </tr>
+          )}
+        </Table>
+      </div>
 
-      <section>
-        <h2 className="text-lg font-bold mb-3">Commission ledger ({commissionList.length})</h2>
-        <div className="space-y-1">
-          {commissionList.map((c) => (
-            <div key={c.id} className="flex items-center gap-4 text-zinc-300">
-              <span className="w-40 truncate text-blue-300">{c.affiliates?.code ?? '?'}</span>
-              <span className="w-48 truncate">
-                {c.users?.github_username ?? c.users?.email ?? 'unknown user'}
-              </span>
-              <span className="w-24">{cents(c.payment_amount_cents)}</span>
-              <span className="w-24 font-bold text-green-300">{cents(c.commission_cents)}</span>
-              <span className={c.status === 'paid' ? 'w-16 text-green-400' : 'w-16 text-yellow-400'}>
-                {c.status}
-              </span>
-              <span className="w-28 text-zinc-600">
-                {new Date(c.created_at).toLocaleDateString()}
-              </span>
+      <div className="mb-3 flex items-center gap-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+          Commission ledger ({commissionList.length})
+        </h2>
+        <a
+          href={unpaidOnly ? '/internal/affiliates' : '/internal/affiliates?filter=unpaid'}
+          className="rounded-lg border border-surface-border px-2 py-0.5 text-xs text-secondary hover:text-primary"
+        >
+          {unpaidOnly ? 'show all' : 'unpaid only'}
+        </a>
+      </div>
+      <Table
+        head={
+          <tr>
+            <th className="px-4 py-2">Affiliate</th>
+            <th className="px-4 py-2">Referred user</th>
+            <th className="px-4 py-2">Payment</th>
+            <th className="px-4 py-2">Commission</th>
+            <th className="px-4 py-2">Status</th>
+            <th className="px-4 py-2" />
+          </tr>
+        }
+      >
+        {commissionList.map((c) => (
+          <tr key={c.id} className="text-secondary">
+            <td className="px-4 py-2 text-accent">{c.affiliates?.code ?? '?'}</td>
+            <td className="px-4 py-2 text-primary">
+              {c.users?.github_username ?? c.users?.email ?? 'unknown'}
+            </td>
+            <td className="px-4 py-2">{cents(c.payment_amount_cents)}</td>
+            <td className="px-4 py-2 font-semibold text-primary">{cents(c.commission_cents)}</td>
+            <td className="px-4 py-2">
+              <Badge tone={c.status === 'paid' ? 'green' : 'yellow'}>{c.status}</Badge>
+            </td>
+            <td className="px-4 py-2">
               <form action={setCommissionStatus}>
                 <input type="hidden" name="commission_id" value={c.id} />
-                <input
-                  type="hidden"
-                  name="next_status"
-                  value={c.status === 'paid' ? 'unpaid' : 'paid'}
-                />
-                <button
-                  type="submit"
-                  className="rounded border border-zinc-700 px-2 py-0.5 text-xs hover:bg-zinc-800"
-                >
+                <input type="hidden" name="next_status" value={c.status === 'paid' ? 'unpaid' : 'paid'} />
+                <Button type="submit" variant={c.status === 'paid' ? 'secondary' : 'primary'}>
                   mark {c.status === 'paid' ? 'unpaid' : 'paid'}
-                </button>
+                </Button>
               </form>
-            </div>
-          ))}
-          {commissionList.length === 0 && (
-            <p className="text-zinc-600">No commissions yet.</p>
-          )}
-        </div>
-      </section>
-    </main>
+            </td>
+          </tr>
+        ))}
+        {commissionList.length === 0 && (
+          <tr>
+            <td colSpan={6} className="px-4 py-6 text-center text-muted">
+              No commissions{unpaidOnly ? ' unpaid' : ''}.
+            </td>
+          </tr>
+        )}
+      </Table>
+    </>
+  );
+}
+
+function Field({
+  name,
+  label,
+  placeholder,
+  required,
+  pattern,
+}: {
+  name: string;
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+  pattern?: string;
+}): React.ReactElement {
+  return (
+    <label className="flex flex-col gap-1 text-xs text-secondary">
+      {label}
+      <input
+        name={name}
+        required={required}
+        pattern={pattern}
+        placeholder={placeholder}
+        className="rounded-lg border border-surface-border bg-surface-raised px-2 py-1.5 text-sm text-primary outline-none focus:border-accent"
+      />
+    </label>
   );
 }
