@@ -518,6 +518,13 @@ affiliates.ts is reachable from the whop route only, not worker.ts).
    implement a cap as a cost-control measure. Explicitly logged as backlog
    (2026-07-17), not dropped.
 
+## Google Search Console verification (2026-07-25)
+
+Added `verification.google` to `src/lib/seo.ts` rootMetadata with token
+`8GaqZIZfg8VdKGtqzFOkFK1vxmrLZSk7YmBbHshR5qM`. Next.js emits the
+`<meta name="google-site-verification" ...>` tag site-wide via the root
+layout. Needs deploy to senix.dev before Google can verify. Not committed.
+
 # Project conventions for Claude Code
 
 Writing style:
