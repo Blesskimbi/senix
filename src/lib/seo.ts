@@ -48,7 +48,11 @@ export const rootMetadata: Metadata = {
     ],
     apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
   },
-  alternates: { canonical: canonicalUrl('/') },
+  alternates: {
+    canonical: canonicalUrl('/'),
+    // Feed autodiscovery for readers and crawlers.
+    types: { 'application/rss+xml': [{ url: canonicalUrl('/blog/rss.xml'), title: 'Senix Blog' }] },
+  },
   openGraph: {
     type: 'website',
     siteName: siteConfig.name,

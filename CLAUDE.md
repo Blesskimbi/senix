@@ -513,6 +513,50 @@ enforceInternalBasicAuth). 178 tests pass; tsc clean; next build clean.
 Migration 018 NOT yet applied to prod. server-only NOT used (removed the one
 I initially added to admin-auth.ts; it broke vitest and is redundant there).
 
+## Blog: public pages + in-browser authoring + SEO (2026-07-23)
+
+Branch feature/blog. Migration 019: blog_posts (slug UNIQUE with a CHECK
+constraint, title, excerpt, content_md, cover_image_url, author_user_id,
+status draft|published, published_at, timestamps; index on
+(status, published_at DESC); RLS service-role-only like every other table).
+
+ARCHITECTURE DECISION: DB-backed posts + an /internal/blog editor, NOT MDX
+files in the repo. Reason: repo-based posts need a full GitHub Actions deploy
+per post (OpenNext can't build on the Windows box), so publishing would be
+slow and developer-only. DB-backed means write and publish from the browser
+in seconds, reusing the admin auth + audit log from migration 018.
+
+Public surface: /blog (index, published only, newest first) and /blog/{slug}
+(post detail). Both force-dynamic so a publish is live immediately with no
+deploy. Drafts 404 — getPublishedPost filters status at the QUERY level, so a
+guessed draft slug reveals nothing.
+
+SEO: per-post generateMetadata (title, description from excerpt, canonical,
+article OG with publishedTime/author/cover), BlogPosting JSON-LD on posts and
+Blog JSON-LD on the index, sitemap.ts is now async and includes every
+published post (so new posts are crawlable without a deploy), plus a
+/blog/rss.xml feed with autodiscovery wired into rootMetadata alternates.
+"Blog" added to PRIMARY_NAV_LINKS (site nav) and to the admin sidebar.
+
+Markdown: `marked` (^18, pure JS, Workers-safe). Raw HTML in post source is
+ESCAPED via a renderer override — posts are authored in markdown, so nothing
+is lost, and a compromised admin account cannot plant stored XSS on a public
+marketing page. Prose styling is hand-rolled `.blog-prose` CSS in globals.css
+(no @tailwindcss/typography dependency added).
+
+Authoring: /internal/blog (list + create draft) and /internal/blog/{id}
+(editor: title, auto-slug from title until hand-edited, excerpt with derived
+fallback, cover URL, markdown body; publish/unpublish/delete). Every action
+calls requireAdmin() independently (a layout does NOT protect server actions)
+and writes an audit row (create/update/publish/unpublish/delete_blog_post).
+published_at is stamped on FIRST publish only, so unpublish/republish keeps
+the original date.
+
+Tests: features/blog/__tests__/markdown.test.ts (10) — XSS escaping for
+script/img-onerror/iframe, normal markdown still renders, slugify matches the
+migration's CHECK constraint, excerpt/reading-time helpers. tsc clean.
+Migration 019 NOT yet applied to prod; the blog is inert until it is.
+
 ## Backlog — next up (2026-07-18, do first)
 
 1. TOKEN RESERVATION LEAK — own PR, planned 2026-07-17 night, execute fresh:
