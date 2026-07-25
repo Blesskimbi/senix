@@ -130,6 +130,47 @@ export const faqSchema = {
   })),
 };
 
+/** Article JSON-LD for a blog post. */
+export function articleSchema({
+  title,
+  description,
+  path,
+  publishedAt,
+  updatedAt,
+  author = 'Senix',
+}: {
+  title: string;
+  description: string;
+  path: string;
+  publishedAt: string;
+  updatedAt?: string;
+  author?: string;
+}): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: title,
+    description,
+    datePublished: publishedAt,
+    dateModified: updatedAt ?? publishedAt,
+    author: {
+      '@type': 'Organization',
+      name: author,
+      url: SITE,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Senix',
+      url: SITE,
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': canonicalUrl(path),
+    },
+    url: canonicalUrl(path),
+  };
+}
+
 /** All landing-page structured data, ready to drop into the page. */
 export const landingSchemas = [
   organizationSchema,

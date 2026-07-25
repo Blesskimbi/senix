@@ -525,6 +525,17 @@ Added `verification.google` to `src/lib/seo.ts` rootMetadata with token
 `<meta name="google-site-verification" ...>` tag site-wide via the root
 layout. Needs deploy to senix.dev before Google can verify. Not committed.
 
+## Blog page + first SEO post (2026-07-25)
+
+Replaced `/blog` Coming Soon with a real index and `/blog/[slug]` article
+route. Typed registry in `features/marketing/blog/posts.ts` (no MDX). First
+published post: `why-ai-pr-review-matters-with-cursor-copilot-claude-code`
+(behavioral / risk review for Cursor, Copilot, Claude Code teams). SEO:
+`buildMetadata` now supports `type: 'article'` + published/modified times,
+Article JSON-LD via `articleSchema`, sitemap lists `/blog` weekly plus each
+post. Posts 2-5 (vs CodeRabbit, how it works, 8 risk flags, fifth TBD) not
+written yet; registry is ready. tsc clean. Not committed / not deployed.
+
 # Project conventions for Claude Code
 
 Writing style:

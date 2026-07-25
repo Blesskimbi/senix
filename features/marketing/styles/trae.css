@@ -907,7 +907,7 @@
  * scrollbar height estimate stays accurate before the section is rendered.
  * Applied only to below-fold sections (not the hero or marquee).
  */
-.trae-site main > section:not(.trae-hero):not(.trae-integrations-marquee) {
+.trae-site main:not(.blog-main) > section:not(.trae-hero):not(.trae-integrations-marquee) {
   content-visibility: auto;
   contain-intrinsic-size: auto 480px;
 }

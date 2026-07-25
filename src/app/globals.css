@@ -518,3 +518,29 @@ body {
     padding-inline: 32px;
   }
 }
+
+/* Blog article body: force readable Trae secondary text. Avoids inheritance
+   fights with marketing utilities and keeps list copy visible on dark bg. */
+.trae-site .blog-prose-body,
+.trae-site .blog-prose-body p,
+.trae-site .blog-prose-body li {
+  color: #c9c5d2;
+}
+
+.trae-site .blog-prose h1,
+.trae-site .blog-prose h2 {
+  color: #ffffff;
+}
+
+.trae-site .blog-prose-link {
+  color: #32f08c;
+  text-decoration: underline;
+  text-decoration-color: rgba(50, 240, 140, 0.35);
+  text-underline-offset: 3px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.trae-site .blog-prose-link:hover {
+  color: #3ee1a3;
+  text-decoration-color: rgba(62, 225, 163, 0.7);
+}

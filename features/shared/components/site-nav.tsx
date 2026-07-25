@@ -15,6 +15,7 @@ export const PRIMARY_NAV_LINKS: NavLink[] = [
   { label: 'How it works', href: '/#how-it-works' },
   { label: 'Pricing', href: '/#pricing' },
   { label: 'Docs', href: '/docs' },
+  { label: 'Blog', href: '/blog' },
   { label: 'Changelog', href: '/changelog' },
 ];
 

@@ -73,6 +73,9 @@ export const rootMetadata: Metadata = {
  * Build per-page metadata. Pass a path for the canonical URL, and optional
  * title/description/keywords overrides. The title is fed through the
  * "%s | Senix" template unless `absoluteTitle` is set.
+ *
+ * For blog posts, pass type: 'article' plus publishedTime (and optional
+ * modifiedTime) so Open Graph emits article metadata.
  */
 export function buildMetadata({
   title,
@@ -80,12 +83,18 @@ export function buildMetadata({
   path = '/',
   keywords,
   absoluteTitle = false,
+  type = 'website',
+  publishedTime,
+  modifiedTime,
 }: {
   title: string;
   description?: string;
   path?: string;
   keywords?: string[];
   absoluteTitle?: boolean;
+  type?: 'website' | 'article';
+  publishedTime?: string;
+  modifiedTime?: string;
 }): Metadata {
   const url = canonicalUrl(path);
   return {
@@ -94,12 +103,18 @@ export function buildMetadata({
     keywords,
     alternates: { canonical: url },
     openGraph: {
-      type: 'website',
+      type,
       siteName: siteConfig.name,
       title,
       description,
       url,
       images: [{ url: siteConfig.ogImage, width: 1200, height: 630, alt: siteConfig.name }],
+      ...(type === 'article'
+        ? {
+            publishedTime,
+            modifiedTime: modifiedTime ?? publishedTime,
+          }
+        : {}),
     },
     twitter: {
       card: 'summary_large_image',
