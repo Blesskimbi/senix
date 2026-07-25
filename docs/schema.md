@@ -144,3 +144,20 @@
    - `target` (text, nullable) — affiliate code / commission id / user id / etc
    - `created_at` (timestamptz, indexed desc)
    - RLS enabled, no policies (service-role only).
+
+   ### blog_posts (migration 019)
+   DB-backed blog so admins publish from /internal/blog without a deploy.
+   Public pages render server-side with the service role and filter to
+   status = 'published'; drafts are never exposed.
+   - `id` (uuid, pk)
+   - `slug` (text, UNIQUE, CHECK lowercase a-z0-9 with inner dashes)
+   - `title` (text), `excerpt` (text, nullable — meta description)
+   - `content_md` (text) — markdown source, rendered at request time with
+     raw HTML escaped (features/blog/markdown.ts)
+   - `cover_image_url` (text, nullable)
+   - `author_user_id` (uuid, FK users(id))
+   - `status` ('draft' | 'published'), `published_at` (timestamptz, nullable —
+     stamped on first publish, preserved across unpublish/republish)
+   - `created_at`, `updated_at`
+   - Index on (status, published_at DESC) for the public list.
+   - RLS enabled, no policies (service-role only).
