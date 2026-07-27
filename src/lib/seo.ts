@@ -68,6 +68,9 @@ export const rootMetadata: Metadata = {
     description: siteConfig.description,
     images: [siteConfig.ogImage],
   },
+  verification: {
+    google: '8GaqZIZfg8VdKGtqzFOkFK1vxmrLZSk7YmBbHshR5qM',
+  },
 };
 
 /**
