@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@features/shared/supabase';
 import RequeueButton from './requeue-button';
+import { PageHeader, Card } from '../ui';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -45,8 +46,8 @@ const RISK_BADGE: Record<string, string> = {
 
 /**
  * Internal test panel — quick view of recent analyses with a manual
- * "requeue all failed" trigger. Protected by the Basic Auth middleware
- * (matcher `/internal/:path*` covers this route).
+ * "requeue all failed" trigger (admin-gated server action). Sits inside the
+ * /internal admin shell; access is gated by the layout's admin check.
  */
 export default async function TestPanelPage(): Promise<React.ReactElement> {
   const { data: rows } = await supabaseAdmin
@@ -60,12 +61,11 @@ export default async function TestPanelPage(): Promise<React.ReactElement> {
   const analyses = (rows ?? []) as unknown as AnalysisRow[];
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100 p-8 font-mono text-sm">
-      <h1 className="text-2xl font-bold mb-2">Test Panel</h1>
-      <p className="text-zinc-500 mb-8">10 most recent analyses · manual recovery</p>
+    <>
+      <PageHeader title="Test panel" subtitle="10 most recent analyses · manual recovery" />
 
       <section className="mb-10">
-        <h2 className="text-lg font-bold mb-3">Recent analyses</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Recent analyses</h2>
         <div className="space-y-3">
           {analyses.map((a) => {
             const statusColor = STATUS_COLOR[a.status] ?? 'text-zinc-300';
@@ -78,7 +78,7 @@ export default async function TestPanelPage(): Promise<React.ReactElement> {
             return (
               <div
                 key={a.id}
-                className="rounded-lg border border-zinc-800 p-4 bg-zinc-900/40 space-y-3"
+                className="space-y-3 rounded-xl border border-surface-border bg-surface p-4"
               >
                 <div className="flex items-center gap-3">
                   <span className={`font-bold ${statusColor}`}>{a.status}</span>
@@ -157,9 +157,9 @@ export default async function TestPanelPage(): Promise<React.ReactElement> {
       </section>
 
       <section>
-        <h2 className="text-lg font-bold mb-3">Actions</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Actions</h2>
         <RequeueButton />
       </section>
-    </main>
+    </>
   );
 }

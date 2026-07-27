@@ -41,8 +41,18 @@ export const rootMetadata: Metadata = {
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
-  icons: { icon: '/favicon.ico' },
-  alternates: { canonical: canonicalUrl('/') },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
+    ],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  alternates: {
+    canonical: canonicalUrl('/'),
+    // Feed autodiscovery for readers and crawlers.
+    types: { 'application/rss+xml': [{ url: canonicalUrl('/blog/rss.xml'), title: 'Senix Blog' }] },
+  },
   openGraph: {
     type: 'website',
     siteName: siteConfig.name,
@@ -57,6 +67,9 @@ export const rootMetadata: Metadata = {
     title: siteConfig.defaultTitle,
     description: siteConfig.description,
     images: [siteConfig.ogImage],
+  },
+  verification: {
+    google: '8GaqZIZfg8VdKGtqzFOkFK1vxmrLZSk7YmBbHshR5qM',
   },
 };
 

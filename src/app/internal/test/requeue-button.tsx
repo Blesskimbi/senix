@@ -1,55 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useActionState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { requeueFailedAction, type RequeueActionState } from './actions';
 
-type RequeueResponse = {
-  requeued: number;
-  skipped: number;
-};
+const INITIAL: RequeueActionState = { message: null, error: null };
 
 /**
- * Client-side button that POSTs to /api/internal/requeue-failed and shows
- * an inline status message. Calls `router.refresh()` on success so the
- * server-rendered analyses list re-fetches without a full page reload.
+ * Requeue-failed control, now backed by an admin-gated server action
+ * (requeueFailedAction) instead of a fetch to the machine route — the browser
+ * no longer sends Basic Auth, so the old fetch would 401. The action enforces
+ * admin and records an audit row.
  */
 export default function RequeueButton(): React.ReactElement {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [state, formAction, pending] = useActionState(requeueFailedAction, INITIAL);
 
-  async function onClick(): Promise<void> {
-    setBusy(true);
-    setMessage(null);
-    setError(null);
-    try {
-      const res = await fetch('/api/internal/requeue-failed', { method: 'POST' });
-      if (!res.ok) {
-        throw new Error(`Request failed with status ${res.status}`);
-      }
-      const data = (await res.json()) as RequeueResponse;
-      setMessage(`Requeued ${data.requeued} jobs (skipped ${data.skipped})`);
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+  // Refresh the server-rendered analyses list once a requeue succeeds.
+  useEffect(() => {
+    if (state.message) router.refresh();
+  }, [state.message, router]);
 
   return (
-    <div>
+    <form action={formAction}>
       <button
-        type="button"
-        onClick={onClick}
-        disabled={busy}
-        className="rounded-md border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 px-4 py-2 text-zinc-100"
+        type="submit"
+        disabled={pending}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-black transition-colors duration-150 hover:bg-accent-hover disabled:opacity-50"
       >
-        {busy ? 'Requeueing…' : 'Requeue all failed in last 24h'}
+        {pending ? 'Requeueing…' : 'Requeue all failed in last 24h'}
       </button>
-      {message && <div className="mt-2 text-green-400">{message}</div>}
-      {error && <div className="mt-2 text-red-400">{error}</div>}
-    </div>
+      {state.message && <div className="mt-2 text-sm text-risk-low">{state.message}</div>}
+      {state.error && <div className="mt-2 text-sm text-risk-high">{state.error}</div>}
+    </form>
   );
 }

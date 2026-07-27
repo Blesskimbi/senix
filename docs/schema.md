@@ -93,3 +93,71 @@
    - All tables have RLS enabled.
    - Users can only see their own installations, repos, PRs, and analyses (joined via `installations.installed_by_user_id`).
    - Service role (used by the worker) bypasses RLS.
+   ### affiliates (migration 017)
+   YouTuber referral partners; codes power senix.dev/yt/{code} links.
+   - `id` (uuid, primary key)
+   - `code` (text, unique) — lowercase [a-z0-9-], 2-40 chars
+   - `name` (text)
+   - `payout_contact` (text, nullable)
+   - `created_at` (timestamptz, default `now()`)
+   - RLS enabled, no policies (service-role only).
+
+   ### users.referred_by_affiliate_id (migration 017)
+   First-touch attribution, set once at signup from the senix_ref cookie.
+   References `affiliates(id)`, nullable, partial index where not null.
+
+   ### affiliate_commissions (migration 017)
+   10% of a referred user's FIRST subscription payment. Written only by the
+   Whop payment.succeeded webhook; idempotent structurally:
+   - `whop_payment_id` (text, UNIQUE) — retry-safe
+   - `user_id` (uuid, UNIQUE) — one commission per referred user, ever
+   - `affiliate_id`, `payment_amount_cents`, `commission_cents` (10%),
+     `currency`, `status` ('unpaid'|'paid'), `created_at`, `paid_at`
+   - RLS enabled, no policies (service-role only).
+
+   ### admin_dashboard_metrics() (migration 017)
+   Single-round-trip jsonb aggregate powering /internal/metrics: signups,
+   plan counts, MRR (active paid users x list price in SQL; keep in sync
+   with PAID_PLAN_DETAILS), review totals/failures, an explicit "errored"
+   bucket (completed with NULL risk_level), credit pack revenue, and
+   commission totals.
+
+   ### admin_users (migration 018)
+   Per-person admins for /internal/*. An admin is a signed-in user (GitHub
+   OAuth) whose users.id is here. Replaces the shared INTERNAL_PASSWORD Basic
+   Auth for the /internal PAGES (machine /api/internal/* routes keep their own
+   auth).
+   - `id` (uuid, pk)
+   - `user_id` (uuid, UNIQUE, FK users(id) ON DELETE CASCADE)
+   - `role` ('super_admin' | 'admin')
+   - `created_by` (uuid, FK users(id), nullable)
+   - `created_at` (timestamptz)
+   - RLS enabled, no policies (service-role only).
+   - Seeded: Eng-Alvin super_admin; hamishfromatech, Blesskimbi admin.
+
+   ### admin_audit_log (migration 018)
+   One row per state-changing /internal action, attributed to the acting admin.
+   - `id` (uuid, pk)
+   - `admin_user_id` (uuid, FK users(id))
+   - `action` (text) — e.g. create_affiliate, mark_commission_paid, add_admin,
+     remove_admin, requeue_failed
+   - `target` (text, nullable) — affiliate code / commission id / user id / etc
+   - `created_at` (timestamptz, indexed desc)
+   - RLS enabled, no policies (service-role only).
+
+   ### blog_posts (migration 019)
+   DB-backed blog so admins publish from /internal/blog without a deploy.
+   Public pages render server-side with the service role and filter to
+   status = 'published'; drafts are never exposed.
+   - `id` (uuid, pk)
+   - `slug` (text, UNIQUE, CHECK lowercase a-z0-9 with inner dashes)
+   - `title` (text), `excerpt` (text, nullable — meta description)
+   - `content_md` (text) — markdown source, rendered at request time with
+     raw HTML escaped (features/blog/markdown.ts)
+   - `cover_image_url` (text, nullable)
+   - `author_user_id` (uuid, FK users(id))
+   - `status` ('draft' | 'published'), `published_at` (timestamptz, nullable —
+     stamped on first publish, preserved across unpublish/republish)
+   - `created_at`, `updated_at`
+   - Index on (status, published_at DESC) for the public list.
+   - RLS enabled, no policies (service-role only).

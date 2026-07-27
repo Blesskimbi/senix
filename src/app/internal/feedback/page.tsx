@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@features/shared/supabase';
+import { PageHeader } from '../ui';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -57,22 +58,19 @@ export default async function InternalFeedbackPage(): Promise<React.ReactElement
   const grouped = groupByStatus(rows);
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100 p-6 sm:p-10">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-10">
-          <h1 className="text-2xl font-bold tracking-tight">Feedback</h1>
-          <p className="mt-2 text-sm text-zinc-400">
-            {rows.length} submission{rows.length === 1 ? '' : 's'} total · read-only
-          </p>
-        </header>
+    <>
+      <PageHeader
+        title="Feedback"
+        subtitle={`${rows.length} submission${rows.length === 1 ? '' : 's'} total · read-only`}
+      />
 
-        {error && (
-          <div className="mb-6 rounded-md border border-red-900/40 bg-red-950/40 px-3 py-2 text-sm text-red-200">
-            Error loading feedback: {error.message}
-          </div>
-        )}
+      {error && (
+        <div className="mb-6 rounded-xl border border-risk-high/40 bg-risk-high/10 px-3 py-2 text-sm text-risk-high">
+          Error loading feedback: {error.message}
+        </div>
+      )}
 
-        <div className="space-y-10">
+      <div className="space-y-10">
           {STATUS_ORDER.map((status) => {
             const items = grouped[status];
             if (!items || items.length === 0) return null;
@@ -89,12 +87,11 @@ export default async function InternalFeedbackPage(): Promise<React.ReactElement
               </section>
             );
           })}
-          {rows.length === 0 && !error && (
-            <p className="text-sm text-zinc-500">No feedback yet.</p>
-          )}
-        </div>
+        {rows.length === 0 && !error && (
+          <p className="text-sm text-muted">No feedback yet.</p>
+        )}
       </div>
-    </main>
+    </>
   );
 }
 
